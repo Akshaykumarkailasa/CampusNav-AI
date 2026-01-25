@@ -1,45 +1,40 @@
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
-const { db } = require("./firebase");
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-const locations = [
-  { name: "CSE Block", lat: 17.5216, lng: 78.3674 },
-  { name: "Mechanical/Civil/EEE Block", lat: 17.5212, lng: 78.3672 },
-  { name: "IT Block", lat: 17.5204, lng: 78.3674 },
-  { name: "Library", lat: 17.5205, lng: 78.3675 },
-  { name: "Canteen", lat: 17.5204, lng: 78.3666 },
-  { name: "Gokaraju Lailavathi Block", lat: 17.5210, lng: 78.3656 },
-  { name: "AIML Block", lat: 17.5218, lng: 78.3670 }
-];
+// ---------- TEST ROUTE ----------
+app.get("/", (req, res) => {
+  res.send("CampusNav Backend is running");
+});
 
+// ---------- LOCATIONS ----------
 app.get("/api/locations", (req, res) => {
-  res.json(locations);
+  res.json([
+    { name: "Library", lat: 17.5209, lng: 78.3673 },
+    { name: "Canteen", lat: 17.5201, lng: 78.3664 },
+    { name: "Admin Block", lat: 17.5212, lng: 78.3681 }
+  ]);
 });
 
-app.post("/api/save-search", async (req, res) => {
-  try {
-    const { start, destination, distance, duration } = req.body;
-
-    await db.collection("searches").add({
-      start,
-      destination,
-      distance,
-      duration,
-      createdAt: new Date()
-    });
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// ---------- SEARCH LOG ----------
+app.post("/api/log-route", (req, res) => {
+  const { start, destination } = req.body;
+  console.log("Route logged:", start, destination);
+  res.json({ success: true });
 });
 
+// ---------- AI CROWD STATUS ----------
+app.get("/api/crowd-status", (req, res) => {
+  const levels = ["Low", "Moderate", "High"];
+  const random = levels[Math.floor(Math.random() * levels.length)];
+  res.json({ status: random });
+});
+
+// ---------- START ----------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`Backend running on http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
+});

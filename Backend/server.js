@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const db = require("./firebase"); // 🔥 Firestore connection
 
 const app = express();
 app.use(cors());
@@ -19,11 +20,26 @@ app.get("/api/locations", (req, res) => {
   ]);
 });
 
-// ---------- SEARCH LOG ----------
-app.post("/api/log-route", (req, res) => {
-  const { start, destination } = req.body;
-  console.log("Route logged:", start, destination);
-  res.json({ success: true });
+// ---------- SEARCH LOG (🔥 FIXED) ----------
+app.post("/api/log-route", async (req, res) => {
+  try {
+    const { start, destination, distance, duration } = req.body;
+
+    await db.collection("navigation_logs").add({
+      start,
+      destination,
+      distance,
+      duration,
+      timestamp: new Date()
+    });
+
+    console.log("✅ Route saved to Firestore:", start, "→", destination);
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error("❌ Firestore write failed:", error);
+    res.status(500).json({ success: false });
+  }
 });
 
 // ---------- AI CROWD STATUS ----------

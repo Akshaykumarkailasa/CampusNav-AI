@@ -1,5 +1,4 @@
-const API_URL = "http://localhost:5000/api";
-
+const API_URL = "https://campusnav-ai-1.onrender.com/api";
 let map, directionsService, directionsRenderer;
 let currentMarker = null;
 let startMarker = null;

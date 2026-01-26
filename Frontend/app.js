@@ -1,115 +1,134 @@
 const API_URL = "https://campusnav-ai-1.onrender.com/api";
 
 let map, directionsService, directionsRenderer;
+let currentMarker = null;
+let startMarker = null;
+let destMarker = null;
 let locationData = [];
 
-// =====================
-// FETCH LOCATIONS
-// =====================
-async function fetchLocations() {
-  try {
+document.addEventListener("DOMContentLoaded", () => {
+
+  async function fetchLocations() {
     const res = await fetch(`${API_URL}/locations`);
     locationData = await res.json();
     populateDropdowns();
-  } catch (err) {
-    console.error("Failed to fetch locations", err);
   }
-}
 
-function populateDropdowns() {
-  const start = document.getElementById("start");
-  const dest = document.getElementById("destination");
+  function populateDropdowns() {
+    const startSelect = document.getElementById("start");
+    const destSelect = document.getElementById("destination");
 
-  start.innerHTML = `<option value="">-- Select --</option>`;
-  dest.innerHTML = `<option value="">-- Select --</option>`;
+    startSelect.innerHTML = `<option value="">-- Select --</option>`;
+    destSelect.innerHTML = `<option value="">-- Select --</option>`;
 
-  locationData.forEach(loc => {
-    const o1 = document.createElement("option");
-    o1.value = loc.name;
-    o1.textContent = loc.name;
+    locationData.forEach(loc => {
+      const opt1 = document.createElement("option");
+      opt1.value = loc.name;
+      opt1.text = loc.name;
+      startSelect.appendChild(opt1);
 
-    const o2 = o1.cloneNode(true);
+      const opt2 = document.createElement("option");
+      opt2.value = loc.name;
+      opt2.text = loc.name;
+      destSelect.appendChild(opt2);
+    });
+  }
 
-    start.appendChild(o1);
-    dest.appendChild(o2);
-  });
-}
+  function getCoordinates(name) {
+    return locationData.find(l => l.name === name);
+  }
 
-function getCoords(name) {
-  return locationData.find(l => l.name === name);
-}
+  window.initMap = function () {
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: { lat: 17.5205, lng: 78.367 },
+      zoom: 17,
+    });
 
-// =====================
-// MAP INITIALIZATION
-// =====================
-window.initMap = function () {
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 17.5205, lng: 78.367 },
-    zoom: 17,
-  });
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({ map });
 
-  directionsService = new google.maps.DirectionsService();
-  directionsRenderer = new google.maps.DirectionsRenderer({ map });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const userLoc = {
+          name: "Current Location",
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
 
-  fetchLocations();
-};
+        currentMarker = new google.maps.Marker({
+          position: userLoc,
+          map,
+          icon: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+          title: "You are here",
+        });
 
-// =====================
-// ROUTE + AI + LOGGING
-// =====================
-async function updateRoute() {
-  const s = document.getElementById("start").value;
-  const d = document.getElementById("destination").value;
+        map.setCenter(userLoc);
+        fetchLocations();
+      },
+      () => fetchLocations()
+    );
+  };
 
-  if (!s || !d) return;
+  function updateRoute() {
+    const s = document.getElementById("start").value;
+    const d = document.getElementById("destination").value;
+    if (!s || !d) return;
 
-  const start = getCoords(s);
-  const dest = getCoords(d);
+    const start = getCoordinates(s);
+    const dest = getCoordinates(d);
 
-  directionsService.route(
-    {
-      origin: start,
-      destination: dest,
-      travelMode: google.maps.TravelMode.WALKING,
-    },
-    async (res, status) => {
-      if (status !== "OK") return;
+    directionsService.route(
+      {
+        origin: start,
+        destination: dest,
+        travelMode: google.maps.TravelMode.WALKING,
+      },
+      (result, status) => {
+        if (status === "OK") {
+          directionsRenderer.setDirections(result);
+          const leg = result.routes[0].legs[0];
+          document.getElementById("distance").innerText =
+            `Distance: ${leg.distance.text}`;
+          document.getElementById("duration").innerText =
+            `Time: ${leg.duration.text}`;
 
-      directionsRenderer.setDirections(res);
-
-      const leg = res.routes[0].legs[0];
-      document.getElementById("distance").innerText =
-        `Distance: ${leg.distance.text}`;
-      document.getElementById("duration").innerText =
-        `Time: ${leg.duration.text}`;
-
-      // 🔥 AI Crowd Status
-      try {
-        const aiRes = await fetch(
-          `${API_URL}/crowd-status?distance=${leg.distance.value}`
-        );
-        const ai = await aiRes.json();
-        document.getElementById("ai-status").innerText =
-          `AI Crowd Status: ${ai.status}`;
-      } catch {
-        document.getElementById("ai-status").innerText =
-          "AI Crowd Status: unavailable";
+          // log route
+          fetch(`${API_URL}/log-route`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ start: s, destination: d }),
+          });
+        }
       }
+    );
+  }
 
-      // 🔥 Store search
-      fetch(`${API_URL}/log-route`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          start: s,
-          destination: d,
-          distance: leg.distance.text,
-          duration: leg.duration.text,
-        }),
-      });
+  document.getElementById("start").addEventListener("change", updateRoute);
+  document.getElementById("destination").addEventListener("change", updateRoute);
+
+  document.getElementById("recenter-btn").addEventListener("click", () => {
+    if (currentMarker) {
+      map.setCenter(currentMarker.getPosition());
+      map.setZoom(17);
     }
-  );
-}
+  });
 
-document.getElementById("start").addEventListener("change", updateRoute);
-document.getElementById("destination").addEventListener("change", updateRoute);
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    directionsRenderer.setDirections({ routes: [] });
+    document.getElementById("distance").innerText = "Distance: 0 km";
+    document.getElementById("duration").innerText = "Time: 0 mins";
+  });
+
+  document.getElementById("navigate-btn").addEventListener("click", () => {
+    const s = document.getElementById("start").value;
+    const d = document.getElementById("destination").value;
+    if (!s || !d) return alert("Select start and destination");
+
+    const start = getCoordinates(s);
+    const dest = getCoordinates(d);
+
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lng}&destination=${dest.lat},${dest.lng}&travelmode=walking`;
+    window.open(url, "_blank");
+  });
+
+});

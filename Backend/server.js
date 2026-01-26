@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const db = require("./firebase"); // Firestore
+const axios = require("axios");
 
 const app = express();
 app.use(cors());
@@ -14,62 +14,38 @@ app.get("/", (req, res) => {
 // ---------- LOCATIONS ----------
 app.get("/api/locations", (req, res) => {
   res.json([
-    { name: "Current Location", lat: null, lng: null },
+    { name: "Library", lat: 17.5209, lng: 78.3673 },
+    { name: "Canteen", lat: 17.5201, lng: 78.3664 },
+    { name: "Admin Block", lat: 17.5212, lng: 78.3681 },
     { name: "CSE Block", lat: 17.5216, lng: 78.3674 },
-    { name: "Mechanical/Civil/EEE Block", lat: 17.5212, lng: 78.3672 },
-    { name: "EEE Block", lat: 17.5211, lng: 78.3665 },
-    { name: "IT Block", lat: 17.5204, lng: 78.3674 },
-    { name: "Canteen", lat: 17.5204, lng: 78.3666 },
-    { name: "Gokaraju Lailavathi Block", lat: 17.5210, lng: 78.3656 },
-    { name: "Bank", lat: 17.5190, lng: 78.3682 },
-    { name: "Pharmacy", lat: 17.5206, lng: 78.3688 },
-    { name: "Library", lat: 17.5205, lng: 78.3675 },
-    { name: "Halls 1 and 2", lat: 17.5192, lng: 78.3679 },
-    { name: "Volleyball Court", lat: 17.5194, lng: 78.3679 },
-    { name: "Cricket Ground", lat: 17.5194, lng: 78.3663 },
-    { name: "Open Air Stadium", lat: 17.5207, lng: 78.3667 },
     { name: "AIML Block", lat: 17.5218, lng: 78.3670 }
   ]);
 });
 
-
-// ---------- SEARCH LOG (WITH HARD DEBUG) ----------
-app.post("/api/log-route", async (req, res) => {
-  console.log("🔥 /api/log-route HIT");
-
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    console.error("❌ FIREBASE_PROJECT_ID missing");
-    return res.status(500).json({ error: "Firebase project ID missing" });
-  }
-
-  try {
-    const { start, destination, distance, duration } = req.body;
-
-    await db.collection("navigation_logs").add({
-      start,
-      destination,
-      distance,
-      duration,
-      timestamp: new Date()
-    });
-
-    console.log("✅ Firestore write SUCCESS");
-    res.json({ success: true });
-
-  } catch (error) {
-    console.error("❌ Firestore write FAILED:", error);
-    res.status(500).json({ error: error.message });
-  }
+// ---------- SEARCH LOG ----------
+app.post("/api/log-route", (req, res) => {
+  const { start, destination } = req.body;
+  console.log("Route logged:", start, destination);
+  res.json({ success: true });
 });
 
 // ---------- AI CROWD STATUS ----------
-app.get("/api/crowd-status", (req, res) => {
-  const levels = ["Low", "Moderate", "High"];
-  const random = levels[Math.floor(Math.random() * levels.length)];
-  res.json({ status: data.crowd_level });
+const AI_URL = "https://campusnav-ai-service.onrender.com";
+
+
+app.get("/api/crowd-status", async (req, res) => {
+  try {
+    const response = await axios.get(`${AI_URL}/predict`);
+
+    // Normalize AI output
+    res.json({ status: response.data.crowd_level });
+  } catch (err) {
+    console.error("AI ERROR:", err.message);
+    res.status(500).json({ status: "Unavailable" });
+  }
 });
 
-// ---------- START SERVER ----------
+// ---------- START ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);

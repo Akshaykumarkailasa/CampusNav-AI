@@ -1,26 +1,27 @@
 from fastapi import FastAPI
-import joblib
-from datetime import datetime
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# Load trained model
-model = joblib.load("crowd_model.pkl")
+class CrowdInput(BaseModel):
+    route_count: int
 
-@app.get("/predict")
-def predict_crowd():
-    hour = datetime.now().hour
-    prediction = model.predict([[hour]])[0]
+@app.get("/")
+def root():
+    return {"message": "CampusNav AI is running"}
 
-    if prediction > 70:
-        level = "HIGH"
-    elif prediction > 40:
-        level = "MEDIUM"
+@app.post("/predict")
+def predict_crowd(data: CrowdInput):
+    count = data.route_count
+
+    if count < 10:
+        crowd = "LOW"
+    elif count < 30:
+        crowd = "MEDIUM"
     else:
-        level = "LOW"
+        crowd = "HIGH"
 
     return {
-        "current_hour": hour,
-        "predicted_route_count": int(prediction),
-        "crowd_level": level
+        "route_count": count,
+        "crowd_level": crowd
     }

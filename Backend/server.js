@@ -6,12 +6,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ---------- TEST ROUTE ----------
+// ---------------- GLOBAL SEARCH COUNTER ----------------
+let routeSearchCount = 0;
+
+// ---------------- TEST ----------------
 app.get("/", (req, res) => {
   res.send("CampusNav Backend is running");
 });
 
-// ---------- LOCATIONS ----------
+// ---------------- LOCATIONS ----------------
 app.get("/api/locations", (req, res) => {
   res.json([
     { name: "Current Location", lat: null, lng: null },
@@ -32,29 +35,30 @@ app.get("/api/locations", (req, res) => {
   ]);
 });
 
-// ---------- SEARCH LOG ----------
+// ---------------- SEARCH LOG ----------------
 app.post("/api/log-route", (req, res) => {
-  const { start, destination } = req.body;
-  console.log("Route logged:", start, destination);
+  routeSearchCount += 1;
+  console.log("Route search count:", routeSearchCount);
   res.json({ success: true });
 });
 
-// ---------- AI CROWD STATUS ----------
+// ---------------- AI CROWD STATUS ----------------
 const AI_URL = "https://campusnav-ai.onrender.com";
-
 
 app.get("/api/crowd-status", async (req, res) => {
   try {
-    console.log("Calling AI at:", `${AI_URL}/predict`);
-    const response = await axios.get(`${AI_URL}/predict`);
+    const response = await axios.post(`${AI_URL}/predict`, {
+      route_count: routeSearchCount
+    });
+
     res.json({ status: response.data.crowd_level });
   } catch (err) {
-    console.error("AI ERROR FULL:", err.toString());
+    console.error("AI ERROR:", err.message);
     res.status(500).json({ status: "Unavailable" });
   }
 });
 
-// ---------- START ----------
+// ---------------- START ----------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);

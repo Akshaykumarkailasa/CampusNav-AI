@@ -35,12 +35,11 @@ const AI_URL = "https://campusnav-ai-service.onrender.com";
 
 app.get("/api/crowd-status", async (req, res) => {
   try {
+    console.log("Calling AI at:", `${AI_URL}/predict`);
     const response = await axios.get(`${AI_URL}/predict`);
-
-    // Normalize AI output
     res.json({ status: response.data.crowd_level });
   } catch (err) {
-    console.error("AI ERROR:", err.message);
+    console.error("AI ERROR FULL:", err.toString());
     res.status(500).json({ status: "Unavailable" });
   }
 });

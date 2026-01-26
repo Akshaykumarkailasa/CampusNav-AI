@@ -12,7 +12,6 @@ app.get("/", (req, res) => {
 });
 
 // ---------- LOCATIONS ----------
-// ---------- LOCATIONS (FULL LIST) ----------
 app.get("/api/locations", (req, res) => {
   res.json([
     { name: "Current Location", lat: null, lng: null },
@@ -67,7 +66,7 @@ app.post("/api/log-route", async (req, res) => {
 app.get("/api/crowd-status", (req, res) => {
   const levels = ["Low", "Moderate", "High"];
   const random = levels[Math.floor(Math.random() * levels.length)];
-  res.json({ status: random });
+  res.json({ status: data.crowd_level });
 });
 
 // ---------- START SERVER ----------

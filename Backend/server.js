@@ -30,7 +30,7 @@ app.post("/api/log-route", (req, res) => {
 });
 
 // ---------- AI CROWD STATUS ----------
-const AI_URL = "https://campusnav-ai-service.onrender.com";
+const AI_URL = "https://campusnav-ai.onrender.com";
 
 
 app.get("/api/crowd-status", async (req, res) => {

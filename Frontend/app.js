@@ -133,9 +133,10 @@ async function updateRouteAndAI() {
     document.getElementById("ai-status").innerText =
       `AI Crowd Status: ${data.status}`;
   } catch {
-    document.getElementById("ai-status").innerText =
-      "AI Crowd Status: Unavailable";
-  }
+  document.getElementById("ai-status").innerText =
+    "AI Crowd Status: Warming up… please wait";
+}
+
 }
 
 // ---------------- BUTTONS ----------------

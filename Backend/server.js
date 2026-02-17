@@ -21,7 +21,6 @@ app.get("/", (req, res) => {
 // ---------------- LOCATIONS ----------------
 app.get("/api/locations", (req, res) => {
   res.json([
-    { name: "Current Location", lat: null, lng: null },
     { name: "CSE Block", lat: 17.5216, lng: 78.3674 },
     { name: "Mechanical/Civil/EEE Block", lat: 17.5212, lng: 78.3672 },
     { name: "EEE Block", lat: 17.5211, lng: 78.3665 },

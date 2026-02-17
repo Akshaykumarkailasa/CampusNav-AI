@@ -1,4 +1,5 @@
-const API_URL = "https://campusnav-ai-1.onrender.com";
+
+const API_URL = "https://campusnav-backend-4law.onrender.com";
 
 let map, directionsService, directionsRenderer;
 let currentMarker = null;
@@ -47,28 +48,36 @@ function initMap() {
   directionsService = new google.maps.DirectionsService();
   directionsRenderer = new google.maps.DirectionsRenderer({ map });
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const userLoc = {
-        name: "Current Location",
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-      };
+  // First load static locations
+  fetchLocations().then(() => {
 
-      locationData.unshift(userLoc);
+    //trying to get current location
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const userLoc = {
+          name: "Current Location",
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
 
-      currentMarker = new google.maps.Marker({
-        position: userLoc,
-        map,
-        icon: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-        title: "You are here",
-      });
+        // Add to beginning
+        locationData.unshift(userLoc);
+        populateDropdowns();
 
-      map.setCenter(userLoc);
-      fetchLocations();
-    },
-    () => fetchLocations()
-  );
+        currentMarker = new google.maps.Marker({
+          position: userLoc,
+          map,
+          icon: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+          title: "You are here",
+        });
+
+        map.setCenter(userLoc);
+      },
+      () => {
+        console.log("Location permission denied.");
+      }
+    );
+  });
 }
 
 // ---------------- ROUTE + AI ----------------
@@ -85,10 +94,12 @@ async function updateRouteAndAI() {
   const s = getCoordinates(start);
   const d = getCoordinates(dest);
 
+  if (!s || !d) return;
+
   directionsService.route(
     {
-      origin: s,
-      destination: d,
+      origin: { lat: s.lat, lng: s.lng },
+      destination: { lat: d.lat, lng: d.lng },
       travelMode: google.maps.TravelMode.WALKING,
     },
     (result, status) => {
@@ -121,22 +132,23 @@ async function updateRouteAndAI() {
     }
   );
 
+  // Log route
   await fetch(`${API_URL}/api/log-route`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ start, destination: dest }),
   });
 
+  // Fetching AI crowd status
   try {
     const res = await fetch(`${API_URL}/api/crowd-status`);
     const data = await res.json();
     document.getElementById("ai-status").innerText =
       `AI Crowd Status: ${data.status}`;
   } catch {
-  document.getElementById("ai-status").innerText =
-    "AI Crowd Status: Warming up… please wait";
-}
-
+    document.getElementById("ai-status").innerText =
+      "AI Crowd Status: Warming up… please wait";
+  }
 }
 
 // ---------------- BUTTONS ----------------
